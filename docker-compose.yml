@@ -1,0 +1,148 @@
+version: '3.8'
+
+services:
+  # Config Server Replica Set
+  cfgsvr1:
+    image: mongo:latest
+    container_name: cfgsvr1
+    command: mongod --configsvr --replSet cfgrs --port 27017 --dbpath /data/db
+    volumes:
+      - cfgsvr1:/data/db
+    networks:
+      - mongo-cluster
+    ports:
+      - "27119:27017"
+
+  cfgsvr2:
+    image: mongo:latest
+    container_name: cfgsvr2
+    command: mongod --configsvr --replSet cfgrs --port 27017 --dbpath /data/db
+    volumes:
+      - cfgsvr2:/data/db
+    networks:
+      - mongo-cluster
+
+  cfgsvr3:
+    image: mongo:latest
+    container_name: cfgsvr3
+    command: mongod --configsvr --replSet cfgrs --port 27017 --dbpath /data/db
+    volumes:
+      - cfgsvr3:/data/db
+    networks:
+      - mongo-cluster
+
+  # Shard 1 Replica Set
+  shard1svr1:
+    image: mongo:latest
+    container_name: shard1svr1
+    command: mongod --shardsvr --replSet shard1rs --port 27017 --dbpath /data/db
+    volumes:
+      - shard1svr1:/data/db
+    networks:
+      - mongo-cluster
+    ports:
+      - "27317:27017"
+
+  shard1svr2:
+    image: mongo:latest
+    container_name: shard1svr2
+    command: mongod --shardsvr --replSet shard1rs --port 27017 --dbpath /data/db
+    volumes:
+      - shard1svr2:/data/db
+    networks:
+      - mongo-cluster
+
+  shard1svr3:
+    image: mongo:latest
+    container_name: shard1svr3
+    command: mongod --shardsvr --replSet shard1rs --port 27017 --dbpath /data/db
+    volumes:
+      - shard1svr3:/data/db
+    networks:
+      - mongo-cluster
+
+  # Shard 2 Replica Set
+  shard2svr1:
+    image: mongo:latest
+    container_name: shard2svr1
+    command: mongod --shardsvr --replSet shard2rs --port 27017 --dbpath /data/db
+    volumes:
+      - shard2svr1:/data/db
+    networks:
+      - mongo-cluster
+    ports:
+      - "27327:27017"
+
+  shard2svr2:
+    image: mongo:latest
+    container_name: shard2svr2
+    command: mongod --shardsvr --replSet shard2rs --port 27017 --dbpath /data/db
+    volumes:
+      - shard2svr2:/data/db
+    networks:
+      - mongo-cluster
+
+  shard2svr3:
+    image: mongo:latest
+    container_name: shard2svr3
+    command: mongod --shardsvr --replSet shard2rs --port 27017 --dbpath /data/db
+    volumes:
+      - shard2svr3:/data/db
+    networks:
+      - mongo-cluster
+
+  # Mongos Router
+  mongos:
+    image: mongo:latest
+    container_name: mongos
+    command: mongos --configdb cfgrs/cfgsvr1:27017,cfgsvr2:27017,cfgsvr3:27017 --port 27017 --bind_ip_all
+    ports:
+      - "27017:27017"
+    networks:
+      - mongo-cluster
+    depends_on:
+      - cfgsvr1
+      - cfgsvr2
+      - cfgsvr3
+      - shard1svr1
+      - shard1svr2
+      - shard1svr3
+      - shard2svr1
+      - shard2svr2
+      - shard2svr3
+
+  # Setup container to initialize the replica sets and sharding
+  mongo-setup:
+    image: mongo:latest
+    container_name: mongo-setup
+    networks:
+      - mongo-cluster
+    depends_on:
+      - cfgsvr1
+      - cfgsvr2
+      - cfgsvr3
+      - shard1svr1
+      - shard1svr2
+      - shard1svr3
+      - shard2svr1
+      - shard2svr2
+      - shard2svr3
+      - mongos
+    volumes:
+      - ./init-scripts:/scripts
+    entrypoint: ["/scripts/init-sharding.sh"]
+
+networks:
+  mongo-cluster:
+    driver: bridge
+
+volumes:
+  cfgsvr1:
+  cfgsvr2:
+  cfgsvr3:
+  shard1svr1:
+  shard1svr2:
+  shard1svr3:
+  shard2svr1:
+  shard2svr2:
+  shard2svr3:
